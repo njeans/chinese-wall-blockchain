@@ -39,9 +39,9 @@ func prDecrypt(ciphertext []byte, key []byte, nonce []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-// func puEncrypt(plaintext []byte, publicKey []byte) ([]byte, error) {
-//
-// }
+func puEncrypt(plaintext []byte, publicKey []byte) ([]byte, error) {
+  return nil,nil
+}
 
 // func puDecrypt(ciphertext []byte, privateKey []byte) []byte {
 // }

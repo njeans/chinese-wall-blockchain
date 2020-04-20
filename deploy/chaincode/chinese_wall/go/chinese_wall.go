@@ -27,7 +27,9 @@ var CORE_PEER_PUBLIC_KEY_FILE string
 
 // Transaction type types that are recognized by this chaincode
 const (
-	DATA int = iota
+	GRANT int = iota
+	REVOKE
+	DATA
 	REQ
 	RESP
 	CAT
@@ -48,6 +50,19 @@ type ReqTransaction struct {
 	Entity     string `json:"entity"`
 }
 
+
+type RespTransaction struct {
+	ObjectType int    `json:"docType"`
+	Category   string `json:"category"`
+	Subject    string `json:"subject"`
+	Entity     string `json:"entity"`
+	Response   int    `json:"response"`
+	EncKey 		 []byte `json:"key"`
+	EncNonce 	 []byte `json:"nonce"`
+	// EncReason  string `json:"reason"`
+}
+
+
 type DataTransaction struct {
 	ObjectType int    `json:"docType"`
 	Category   string `json:"category"`
@@ -60,6 +75,16 @@ type PrivateCategory struct {
 	Name     string
 	Subjects map[string]PrivateSubject
 	Creator  string
+}
+
+// Subject to describe data specific subject for a certain category in private db
+type PrivateSubject struct {
+	Name       string
+	Data       []string
+	AccessList []string
+	Creator    string
+	Keys       map[string][]byte
+	Nonces     map[string][]byte
 }
 
 // Category to describe user defined categories on blockchain
@@ -78,16 +103,6 @@ type PublicSubject struct {
 	Creator    string              `json:"creator"`
 	EncKeys    map[string][]byte   `json:"encKeys"`
 	EncNonces  map[string][]byte   `json:"encNonces"`
-}
-
-// Subject to describe data specific subject for a certain category in private db
-type PrivateSubject struct {
-	Name       string
-	Data       []string
-	AccessList []string
-	Creator    string
-	Keys       map[string][]byte
-	Nonces     map[string][]byte
 }
 
 type PrivateData struct {
@@ -141,7 +156,7 @@ func (t *ChineseWall) Init(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error(err.Error())
 	}
 
-	err = stub.PutState("PK-"+CORE_PEER_LOCALMSPID, pkTransactionAsBytes)
+	err = stub.PutState(CORE_PEER_LOCALMSPID, pkTransactionAsBytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -167,6 +182,12 @@ func (t *ChineseWall) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	case "requestSubject":
 		//request access to data from a subject
 		return t.requestSubject(stub, args)
+	case "respondRequest":
+		//respond to a request for access to data
+		return t.respondRequest(stub, args)
+	// case "readResponse":
+	// 	//read response to request for access to data
+	// 	return t.readResponse(stub, args)
 	case "readSubject":
 		//read data from a subject if accessible
 		return t.readSubject(stub, args)
@@ -187,7 +208,7 @@ func (t *ChineseWall) newCategory(stub shim.ChaincodeStubInterface, args []strin
 	if len(args[0]) <= 0 {
 		return shim.Error("Category Name must be a non-empty string.")
 	}
-	categoryName := "Category-" + args[0]
+	categoryName := args[0]
 
 	_, err := getPrivateCategory(stub, categoryName)
 	if err == nil {
@@ -235,14 +256,14 @@ func (t *ChineseWall) newSubject(stub shim.ChaincodeStubInterface, args []string
 		return shim.Error("Expecting 2 arguments.")
 	}
 	if len(args[0]) <= 0 {
-		return shim.Error("Subject Name must be a non-empty string.")
-	}
-	if len(args[1]) <= 0 {
 		return shim.Error("Subject Category must be a non-empty string.")
 	}
+	if len(args[1]) <= 0 {
+		return shim.Error("Subject Name must be a non-empty string.")
+	}
 
-	subjectName := "Subject-" + args[0]
-	categoryName := "Category-" + args[1]
+	categoryName := args[0]
+	subjectName := args[1]
 
 	privateCategory, err := getPrivateCategory(stub, categoryName)
 	if err != nil {
@@ -341,16 +362,17 @@ func (t *ChineseWall) newData(stub shim.ChaincodeStubInterface, args []string) p
 		return shim.Error("Expecting 3 arguments.")
 	}
 	if len(args[0]) <= 0 {
-		return shim.Error("Subject Name must be a non-empty string.")
+		return shim.Error("Subject Category must be a non-empty string.")
 	}
 	if len(args[1]) <= 0 {
-		return shim.Error("Subject Category must be a non-empty string.")
+		return shim.Error("Subject Name must be a non-empty string.")
 	}
 	if len(args[2]) <= 0 {
 		return shim.Error("Data must be a non-empty string.")
 	}
-	subjectName := "Subject-" + args[0]
-	categoryName := "Category-" + args[1]
+
+	categoryName := args[0]
+	subjectName := args[1]
 	data := args[2]
 
 	privateCategory, err := getPrivateCategory(stub, categoryName)
@@ -406,14 +428,14 @@ func (t *ChineseWall) requestSubject(stub shim.ChaincodeStubInterface, args []st
 		return shim.Error("Expecting 2 arguments.")
 	}
 	if len(args[0]) <= 0 {
-		return shim.Error("Subject Name must be a non-empty string.")
-	}
-	if len(args[1]) <= 0 {
 		return shim.Error("Subject Category must be a non-empty string.")
 	}
+	if len(args[1]) <= 0 {
+		return shim.Error("Subject Name must be a non-empty string.")
+	}
 
-	subjectName := "Subject-" + args[0]
-	categoryName := "Category-" + args[1]
+	categoryName := args[0]
+	subjectName := args[1]
 
 	privateCategory, err := getPrivateCategory(stub, categoryName)
 	if err == nil {
@@ -439,7 +461,7 @@ func (t *ChineseWall) requestSubject(stub shim.ChaincodeStubInterface, args []st
 		ObjectType: REQ,
 		Category: 	categoryName,
 		Subject: 		subjectName,
-		Entity: 		CORE_PEER_LOCALMSPID,
+		Entity: 		"PK-" + CORE_PEER_LOCALMSPID,
 	}
 
 	reqTrnasactionJSONasBytes, err := json.Marshal(reqTransaction)
@@ -455,19 +477,111 @@ func (t *ChineseWall) requestSubject(stub shim.ChaincodeStubInterface, args []st
 	return shim.Success(nil)
 }
 
+func (t *ChineseWall) respondRequest(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 3 {
+		return shim.Error("Expecting 3 arguments.")
+	}
+	if len(args[0]) <= 0 {
+		return shim.Error("Subject Category must be a non-empty string.")
+	}
+	if len(args[1]) <= 0 {
+		return shim.Error("Subject Name must be a non-empty string.")
+	}
+	if len(args[2]) <= 0 {
+		return shim.Error("Data must be a non-empty string.")
+	}
+
+	categoryName := args[0]
+	subjectName := args[1]
+	entity := args[2]
+
+	privateCategory, err := getPrivateCategory(stub, categoryName)
+	if err != nil {
+		log.Println("Private category not found: " + categoryName)
+		return sendRevoke(stub, categoryName, subjectName, entity)
+	}
+
+	for name, value := range privateCategory.Subjects {
+		if contains(value.AccessList, entity) && name != subjectName {
+			log.Println("Entity " + entity + " already has access to subject " + name + " in category " + categoryName)
+			return sendRevoke(stub, categoryName, subjectName, entity)
+		}
+	}
+
+	privateSubject, ok := privateCategory.Subjects[subjectName]
+	if !ok {
+		log.Println("Private subject " + subjectName + " for category "+  categoryName + " not found")
+		return sendRevoke(stub, categoryName, subjectName, entity)
+	}
+
+	privateSubject.AccessList = append(privateSubject.AccessList, entity)
+
+	privateCategory.Subjects[subjectName] = privateSubject
+	privateCategoryJSONasBytes, err := json.Marshal(privateCategory)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutPrivateData(StateDB, categoryName, privateCategoryJSONasBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	publicKey, err := getEntityPublicKey(stub, entity)
+	if err != nil {
+		log.Println("Public Key for entity " + entity + "not found")
+		return sendRevoke(stub, categoryName, subjectName, entity)
+	}
+
+	encKey, err := puEncrypt(privateCategory.Subjects[subjectName].Keys[entity], publicKey)
+	if err != nil {
+		log.Println("Public Key encryption could not be done for entity " + entity)
+		return sendRevoke(stub, categoryName, subjectName, entity)
+	}
+	encNonce, err := puEncrypt(privateCategory.Subjects[subjectName].Keys[entity], publicKey)
+	if err != nil {
+		log.Println("Public Key encryption could not be done for entity " + entity)
+		return sendRevoke(stub, categoryName, subjectName, entity)
+	}
+
+	grantResp := &RespTransaction{
+		ObjectType: RESP,
+		Category: 	categoryName,
+		Subject: 		subjectName,
+		Entity:			entity,
+		Response:   GRANT,
+		EncKey:			encKey,
+		EncNonce: 	encNonce,
+	}
+
+	grantRespJSONasBytes, err := json.Marshal(grantResp)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	timestamp,err := stub.GetTxTimestamp()
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	err = stub.PutState("RESP-" + categoryName + "-" + subjectName + "-" + CORE_PEER_LOCALMSPID + "-" + timestamp.String(), grantRespJSONasBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success([]byte("Granted:" + err.Error()))
+}
+
 func (t *ChineseWall) readSubject(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 2 {
 		return shim.Error("Expecting 2 arguments.")
 	}
 	if len(args[0]) <= 0 {
-		return shim.Error("Subject Name must be a non-empty string.")
-	}
-	if len(args[1]) <= 0 {
 		return shim.Error("Subject Category must be a non-empty string.")
 	}
+	if len(args[1]) <= 0 {
+		return shim.Error("Subject Name must be a non-empty string.")
+	}
 
-	subjectName := "Subject-" + args[0]
-	categoryName := "Category-" + args[1]
+	categoryName := args[0]
+	subjectName := args[1]
 
 	privateData, err := getPrivateData(stub, categoryName, subjectName)
 	if err != nil {
@@ -571,6 +685,45 @@ func getEntityList(stub shim.ChaincodeStubInterface) ([]string, error) {
 	}
 
 	return entities, nil
+}
+
+func getEntityPublicKey(stub shim.ChaincodeStubInterface, entity string) ([]byte, error) {
+	publicKeyAsBytes, err := stub.GetState(entity)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get public key: " + err.Error())
+	}
+
+	var publicKey PKTransaction
+	err = json.Unmarshal(publicKeyAsBytes, &publicKey)
+	if err != nil {
+		return nil, err
+	}
+	return publicKey.PublicKey, nil
+}
+
+func sendRevoke(stub shim.ChaincodeStubInterface, categoryName string, subjectName string, entity string) pb.Response {
+	revokeResp := &RespTransaction{
+		ObjectType: RESP,
+		Category: 	categoryName,
+		Subject: 		subjectName,
+		Entity:			entity,
+		Response:   REVOKE,
+		EncKey:			nil,
+		EncNonce:		nil,
+	}
+	revokeRespJSONasBytes, err := json.Marshal(revokeResp)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	timestamp,err := stub.GetTxTimestamp()
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	err = stub.PutState("RESP-" + categoryName + "-" + subjectName + "-" + CORE_PEER_LOCALMSPID + "-" + timestamp.String(), revokeRespJSONasBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success([]byte("Revoked:" + err.Error()))
 }
 
 func main() {
