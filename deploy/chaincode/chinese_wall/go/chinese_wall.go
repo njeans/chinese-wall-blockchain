@@ -92,6 +92,12 @@ type PrivateSubject struct {
 	Nonces     map[string][]byte
 }
 
+type PrivateData struct {
+	Category	string
+	Subject 	string
+	Data      [][]byte
+}
+
 type ChineseWall struct {
 }
 
@@ -163,9 +169,9 @@ func (t *ChineseWall) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	case "requestSubject":
 		//request access to data from a subject
 		return t.requestSubject(stub, args)
-	// case "readSubject":
-	// 	//read data from a subject if accessible
-	// 	return t.readSubject(stub, args)
+	case "readSubject":
+		//read data from a subject if accessible
+		return t.readSubject(stub, args)
 	// case "listSubjects":
 	// 	//list subjects that are accessible
 	// 	return t.listSubjects(stub, args)
@@ -451,6 +457,34 @@ func (t *ChineseWall) requestSubject(stub shim.ChaincodeStubInterface, args []st
 	return shim.Success(nil)
 }
 
+func (t *ChineseWall) readSubject(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 2 {
+		return shim.Error("Expecting 2 arguments.")
+	}
+	if len(args[0]) <= 0 {
+		return shim.Error("Subject Name must be a non-empty string.")
+	}
+	if len(args[1]) <= 0 {
+		return shim.Error("Subject Category must be a non-empty string.")
+	}
+
+	subjectName := "Subject-" + args[0]
+	categoryName := "Category-" + args[1]
+
+	privateData, err := getPrivateData(stub, categoryName, subjectName)
+	if err != nil {
+		log.Println(err.Error())
+		return shim.Error(err.Error())
+	}
+
+	privateDataJSONasBytes, err := json.Marshal(privateData)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(privateDataJSONasBytes)
+}
+
 func prEncrypt(plaintext []byte, key []byte, nonce []byte) ([]byte, error) {
 
 	block, err := aes.NewCipher(key)
@@ -501,18 +535,13 @@ func getPrivateCategory(stub shim.ChaincodeStubInterface, categoryName string) (
 		return nil, fmt.Errorf("This category does not already exist: " + categoryName)
 	}
 
-	privateCategory := &PrivateCategory{
-		Name:     categoryName,
-		Subjects: map[string]PrivateSubject{},
-		Creator:  CORE_PEER_LOCALMSPID,
-	}
-
-	err = json.Unmarshal(privateCategoryAsBytes, &privateCategoryAsBytes)
+	var privateCategory PrivateCategory
+	err = json.Unmarshal(privateCategoryAsBytes, &privateCategory)
 	if err != nil {
 		return nil, err
 	}
 
-	return privateCategory, nil
+	return &privateCategory, nil
 }
 
 func getPublicCategory(stub shim.ChaincodeStubInterface, categoryName string) (*PublicCategory, error) {
@@ -521,12 +550,30 @@ func getPublicCategory(stub shim.ChaincodeStubInterface, categoryName string) (*
 		return nil, fmt.Errorf("Failed to get category: " + err.Error())
 	}
 
-	publicCategory := &PublicCategory{}
+	var publicCategory PublicCategory
 	err = json.Unmarshal(publicCategoryAsBytes, &publicCategory)
 	if err != nil {
 		return nil, err
 	}
-	return publicCategory, nil
+	return &publicCategory, nil
+}
+
+func getPrivateData(stub shim.ChaincodeStubInterface, categoryName string, subjectName string) ([][]byte, error) {
+	privateDataAsBytes, err := stub.GetPrivateData(PrivateDB, categoryName + "-" + subjectName)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get data information: " + err.Error())
+	} else if privateDataAsBytes == nil {
+		log.Println("This data does not exist: " + categoryName + "-" + subjectName)
+		return nil, fmt.Errorf("This data does not exist: " + categoryName + "-" + subjectName)
+	}
+
+	var privateData PrivateData
+	err = json.Unmarshal(privateDataAsBytes, &privateData)
+	if err != nil {
+		return nil, err
+	}
+
+	return privateData.Data, nil
 }
 
 func getEntityList(stub shim.ChaincodeStubInterface) ([]string, error) {
