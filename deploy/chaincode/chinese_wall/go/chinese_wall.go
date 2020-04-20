@@ -1,12 +1,10 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
+	"encoding/pem"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -20,7 +18,7 @@ const StateDB = "stateDB"
 const PrivateDB = "privateDB"
 const PublicKeyList = "PublicKeyList"
 const PublicKeyIndex = "pk~name"
-
+const PrivateDataList = "PrivateDataList"
 // My unique entity identifier
 var CORE_PEER_LOCALMSPID string
 
@@ -172,9 +170,9 @@ func (t *ChineseWall) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	case "readSubject":
 		//read data from a subject if accessible
 		return t.readSubject(stub, args)
-	// case "listSubjects":
-	// 	//list subjects that are accessible
-	// 	return t.listSubjects(stub, args)
+	case "listSubjects":
+		//list subjects that are accessible
+		return t.listSubjects(stub, args)
 	default:
 		//error
 		log.Println("Invoke did not find func: " + function)
@@ -485,46 +483,18 @@ func (t *ChineseWall) readSubject(stub shim.ChaincodeStubInterface, args []strin
 	return shim.Success(privateDataJSONasBytes)
 }
 
-func prEncrypt(plaintext []byte, key []byte, nonce []byte) ([]byte, error) {
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
+func (t *ChineseWall) listSubjects(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 0 {
+		return shim.Error("Expecting no arguments.")
 	}
-
-	aesgcm, err := cipher.NewGCM(block)
+	privateListAsBytes, err := stub.GetPrivateData(PrivateDB, PrivateDataList)
 	if err != nil {
-		return nil, err
+		return shim.Error("Failed to get data information: " + err.Error())
+	} else if privateListAsBytes == nil {
+		return shim.Success([]byte("[]"))
 	}
-
-	ciphertext := aesgcm.Seal(nil, nonce, plaintext, nil)
-	return ciphertext, nil
+	return shim.Success(privateListAsBytes)
 }
-
-func prDecrypt(ciphertext []byte, key []byte, nonce []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-
-	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, err
-	}
-	return plaintext, nil
-}
-
-// func puEncrypt(plaintext []byte, publicKey []byte) ([]byte, error) {
-//
-// }
-
-// func puDecrypt(ciphertext []byte, privateKey []byte) []byte {
-// }
 
 func getPrivateCategory(stub shim.ChaincodeStubInterface, categoryName string) (*PrivateCategory, error) {
 	privateCategoryAsBytes, err := stub.GetPrivateData(StateDB, categoryName)
