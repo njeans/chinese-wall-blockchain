@@ -3,6 +3,9 @@ package main
 import (
 	"crypto/aes"
 	"crypto/cipher"
+  "crypto/rand"
+  "crypto/rsa"
+  "crypto/sha512"
 )
 
 func prEncrypt(plaintext []byte, key []byte, nonce []byte) ([]byte, error) {
@@ -39,9 +42,22 @@ func prDecrypt(ciphertext []byte, key []byte, nonce []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-func puEncrypt(plaintext []byte, publicKey []byte) ([]byte, error) {
-  return nil,nil
+// puEncrypt encrypts data with public key
+func puEncrypt(plaintext []byte, publicKey *rsa.PublicKey) ([]byte, error) {
+	hash := sha512.New()
+	ciphertext, err := rsa.EncryptOAEP(hash, rand.Reader, publicKey, plaintext, nil)
+	if err != nil {
+		return nil, err
+	}
+	return ciphertext, nil
 }
 
-// func puDecrypt(ciphertext []byte, privateKey []byte) []byte {
-// }
+// puDecrypt decrypts data with private key
+func puDecrypt(ciphertext []byte, privateKey *rsa.PrivateKey) ([]byte, error)  {
+	hash := sha512.New()
+	plaintext, err := rsa.DecryptOAEP(hash, rand.Reader, privateKey, ciphertext, nil)
+  if err != nil {
+		return nil, err
+	}
+	return plaintext, nil
+}

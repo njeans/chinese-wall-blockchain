@@ -1,0 +1,66 @@
+[
+ {
+   "name": "StateDBOrg1MSP",
+   "policy": "OR('Org1MSP.member')",
+   "requiredPeerCount": 0,
+   "maxPeerCount": 3,
+   "blockToLive":0,
+   "memberOnlyRead": true
+},
+ {
+   "name": "PrivateDBOrg1MSP",
+   "policy": "OR('Org1MSP.member')",
+   "requiredPeerCount": 0,
+   "maxPeerCount": 3,
+   "blockToLive":0,
+   "memberOnlyRead": true
+},
+{
+  "name": "StateDBOrg2MSP",
+  "policy": "OR('Org2MSP.member')",
+  "requiredPeerCount": 0,
+  "maxPeerCount": 3,
+  "blockToLive":0,
+  "memberOnlyRead": true
+},
+{
+  "name": "PrivateDBOrg2MSP",
+  "policy": "OR('Org2MSP.member')",
+  "requiredPeerCount": 0,
+  "maxPeerCount": 3,
+  "blockToLive":0,
+  "memberOnlyRead": true
+},
+{
+  "name": "StateDBOrg2MSP",
+  "policy": "OR('Org2MSP.member')",
+  "requiredPeerCount": 0,
+  "maxPeerCount": 3,
+  "blockToLive":0,
+  "memberOnlyRead": true
+},
+{
+  "name": "PrivateDBOrg3MSP",
+  "policy": "OR('Org3MSP.member')",
+  "requiredPeerCount": 0,
+  "maxPeerCount": 3,
+  "blockToLive":0,
+  "memberOnlyRead": true
+},
+{
+  "name": "StateDBOrg4MSP",
+  "policy": "OR('Org4MSP.member')",
+  "requiredPeerCount": 0,
+  "maxPeerCount": 3,
+  "blockToLive":0,
+  "memberOnlyRead": true
+},
+{
+  "name": "PrivateDBOrg4MSP",
+  "policy": "OR('Org4MSP.member')",
+  "requiredPeerCount": 0,
+  "maxPeerCount": 3,
+  "blockToLive":0,
+  "memberOnlyRead": true
+}
+]
