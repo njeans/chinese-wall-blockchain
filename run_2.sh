@@ -2,6 +2,7 @@ set -e
 PROJECT_ROOT=$(pwd)
 cd "$PROJECT_ROOT/deploy/keygen"
 go build
+mkdir "$PROJECT_ROOT/deploy/2-org-1-orderer/keys"
 ./keygen 2 "$PROJECT_ROOT/deploy/2-org-1-orderer/keys"
 cd "$PROJECT_ROOT/deploy/2-org-1-orderer"
 echo "" > "$PROJECT_ROOT/log/2_node_eval.log"
