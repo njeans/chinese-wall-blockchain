@@ -1,34 +1,40 @@
 # cs563
 ## Prerequisites
-* Docker
-* golang
+* Docker & Docker compose
+* golang and set `GOPATH`
+* Node & npm
+* Fabric Prereqs here: <https://hyperledger-fabric.readthedocs.io/en/latest/prereqs.html>
+* Fabric Binaries for version 2.0.0:
+  * From: <https://hyperledger-fabric.readthedocs.io/en/latest/install.html>
 
-## app
+`cd $GOPATH/src/github.com/<github userid>`
+
+`curl -sSL https://bit.ly/2ysbOFE | bash -s -- 2.0.0 `
+
+Add to binaries to path:
+
+`export PATH=$PATH:$GOPATH/src/github.com/<github userid>/fabric-samples/bin`
+
+## Files
+### app
  Contains the nodejs server that handles all responses to requests and reading those responses.
-## chaincode
+### chaincode
  Contains the chinese wall chaincode implementation
+### deploy
+ Contains deployment scripts for the networks and key generation
+#### deploy/keygen
+ Generate keys for all peers
+#### deploy/2-org-1-orderer
+ Scripts and artifacts to run network with 2 organizations and 1 orderer
+#### deploy/4-org-1-orderer
+ Scripts and artifacts to run network with 4 organizations and 1 orderer
 
-## deploy
- Contains deployment scripts for the networks
-## Run the network and tests
-### 2 nodes
-`cd deploy/2-org-1-orderer`
-`./restartNetwork.sh`
 
-### 4 nodes
-`cd deploy/4-org-1-orderer`
-`./restartNetwork.sh`
+## Run and test network
+* `run_2.sh` run 2 node network and execute experiments
+* `run_4.sh` run 4 node network and execute experiments
 
-## Run evaluation
-### 2 nodes
-After starting the network
-
-`cd app`
-`export NUM_ORGS=2`
-`./run_2.sh &`
-
-### 4 nodes
-
-`cd ../app`
-`export NUM_ORGS=4`
-`./run_4.sh &`
+## Change experiment parameters
+* `app/run_eval.sh`
+* 2 Org network: `deploy/2-org-1-orderer/scripts/eval.sh`
+* 4 Org network: `deploy/4-org-1-orderer/scripts/eval.sh`
