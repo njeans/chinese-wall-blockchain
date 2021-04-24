@@ -1,4 +1,9 @@
 # Chinese Wall AC on Hyperledger Blockchain
+## Abstract
+Blockchains are a powerful technology that can be leveraged to allow for accountability and collaboration between multiple parties. With the popularity of permissioned blockchain systems such as Hyperledger Fabric for enterprise use cases, strong expressive access control policies are a necessary tool to facilitate sharing of data and encourage trust among all participants. 
+
+The ability to revoke access to data submitted on the blockchain is desirable due to it's flexibility with respect to security guarantees. We create an implementation of this ability and apply it to a Chinese wall access control model use case. We run benchmarks on this implementation to measure it's usability.
+
 ## Prerequisites
 * Docker & Docker compose
 * golang and set `GOPATH`
