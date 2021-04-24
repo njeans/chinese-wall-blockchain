@@ -2,6 +2,7 @@
 ## Prerequisites
 * Docker & Docker compose
 * golang and set `GOPATH`
+* python3
 * Node & npm
 * Fabric Prereqs here: <https://hyperledger-fabric.readthedocs.io/en/latest/prereqs.html>
 * Fabric Binaries for version 2.0.0:
