@@ -1,4 +1,4 @@
-# cs563
+# Chinese Wall AC on Hyperledger Blockchain
 ## Prerequisites
 * Docker & Docker compose
 * golang and set `GOPATH`
