@@ -5,7 +5,7 @@ Blockchains are a powerful technology that can be leveraged to allow for account
 The ability to revoke access to data submitted on the blockchain is desirable due to it's flexibility with respect to security guarantees. We create an implementation of this ability and apply it to a Chinese wall access control model use case. We run benchmarks on this implementation to measure it's usability.
 
 Full writeup on my website
-<https://www.nerla.me/projects>
+<https://www.nerla.me/projects#h.wgkhrkcstsx9>
 
 ## Prerequisites
 * Docker & Docker compose
